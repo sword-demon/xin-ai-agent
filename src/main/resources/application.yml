@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: xin-ai-agent
+  profiles:
+    active: local
+  ai:
+    dashscope:
+      api-key: ${AI_DASHSCOPE_API_KEY}
+      chat:
+        options:
+          model: qwen-plus
+    # 使用 spring ai ollama 本地部署的配置方式
+#    ollama:
+#      base-url: http://localhost:11434
+#      chat:
+#        model: llama3
+
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+
+# springdoc-openai 接口文档配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: top.wjstar.xinaiagent.controller
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
