@@ -9,6 +9,7 @@ import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Component;
+import top.wjstar.xinaiagent.advisor.MyLoggerAdvisor;
 
 /**
  * @author wxvirus
@@ -38,7 +39,9 @@ public class LoveApp {
                 .defaultSystem(SYSTEM_PROMPT)
                 // 指定默认拦截器
                 .defaultAdvisors(
-                        new MessageChatMemoryAdvisor(chatMemory)
+                        new MessageChatMemoryAdvisor(chatMemory),
+                        // 自定义日志拦截器,可按需开启
+                        new MyLoggerAdvisor()
                 )
                 .build();
     }

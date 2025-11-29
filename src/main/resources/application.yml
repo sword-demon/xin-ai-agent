@@ -5,6 +5,7 @@ spring:
     active: local
   ai:
     dashscope:
+      # 读取的是 local 里面的配置信息,关键的 API KEY 不进行上传到仓库
       api-key: ${AI_DASHSCOPE_API_KEY}
       chat:
         options:
@@ -37,3 +38,8 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+## spring ai 自带的 日志记录的级别是 debug,需要配置一下才能获取,不然一般是看不到打印日志的
+#logging:
+#  level:
+#    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: debug
