@@ -1,15 +1,18 @@
 package top.wjstar.xinaiagent.app;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 import top.wjstar.xinaiagent.advisor.MyLoggerAdvisor;
+import top.wjstar.xinaiagent.chatmemory.FileBasedChatMemory;
 
 /**
  * @author wxvirus
@@ -26,6 +29,8 @@ public class LoveApp {
             "恋爱状态询问沟通、习惯差异引发的矛盾；已婚状态询问家庭责任与亲属关系处理的问题。" +
             "引导用户详述事情经过、对方反应及自身想法，以便给出专属解决方案。";
     private final ChatClient chatClient;
+    @Resource
+    private VectorStore loveAppVectorStore;
 
     /**
      * 使用构造函数来初始化 chatClient
@@ -34,16 +39,25 @@ public class LoveApp {
      */
     public LoveApp(ChatModel dashscopeChatModel) {
         // 初始化基于内存的对话记忆
-        ChatMemory chatMemory = new InMemoryChatMemory();
+//        ChatMemory chatMemory = new InMemoryChatMemory();
+//        chatClient = ChatClient.builder(dashscopeChatModel)
+//                .defaultSystem(SYSTEM_PROMPT)
+//                // 指定默认拦截器
+//                .defaultAdvisors(
+//                        new MessageChatMemoryAdvisor(chatMemory),
+//                        // 自定义日志拦截器,可按需开启
+//                        new MyLoggerAdvisor()
+//                )
+//                .build();
+
+        // 初始化基于文件的对话记忆
+        String fileDir = System.getProperty("user.dir") + "/chat-memories";
+        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                // 指定默认拦截器
                 .defaultAdvisors(
-                        new MessageChatMemoryAdvisor(chatMemory),
-                        // 自定义日志拦截器,可按需开启
-                        new MyLoggerAdvisor()
-                )
-                .build();
+                        new MessageChatMemoryAdvisor(chatMemory)
+                ).build();
     }
 
     /**
@@ -60,7 +74,32 @@ public class LoveApp {
                         .param(AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10)) // 历史消息的条数
                 .call()
                 .chatResponse();
+        assert response != null;
         String content = response.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
+    }
+
+
+    /**
+     * 带 RAG 的对话
+     *
+     * @param message 用户消息
+     * @param chatId  会话 id
+     * @return AI 回复的消息文本
+     */
+    public String doChatWithRag(String message, String chatId) {
+        ChatResponse chatResponse = chatClient.prompt()
+                .user(message)
+                .advisors(spec -> spec
+                        .param(AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+                        .param(AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                // 开启日志, 便于观察效果
+                .advisors(new MyLoggerAdvisor())
+                .advisors(new QuestionAnswerAdvisor(loveAppVectorStore))
+                .call()
+                .chatResponse();
+        String content = chatResponse.getResult().getOutput().getText();
         log.info("content: {}", content);
         return content;
     }
